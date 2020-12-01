@@ -1,11 +1,11 @@
 #include <stdio.h> //Librería básica
 #include <stdlib.h> //Librería básica
 #include "parser.h" //Para los tline y tcommand
-#include <unistd.h>
-#include <errno.h>
-#include <string.h>
-#include <sys/types.h>
-#include <wait.h>
+#include <unistd.h> //Librería general (pipes)
+#include <errno.h> //Para usar la función errno
+#include <string.h> //Para gestión de strings
+#include <sys/types.h> //Librería básica
+#include <wait.h> // Para el wait
 
 
 int main(void) {
