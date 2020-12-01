@@ -2,8 +2,7 @@
 #include <stdlib.h> //Librería básica
 #include "parser.h" //Para los tline y tcommand
 
-int
-main(void) {
+int main(void) {
         char buf[1024];
         tline * line;
         int i,j;
