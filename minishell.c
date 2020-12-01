@@ -1,11 +1,26 @@
 #include <stdio.h> //Librería básica
 #include <stdlib.h> //Librería básica
 #include "parser.h" //Para los tline y tcommand
+#include <unistd.h>
+#include <errno.h>
+#include <string.h>
+#include <sys/types.h>
+#include <wait.h>
+
 
 int main(void) {
+	pid_t pid;
+	int p1[2];
+	int p2[2];
+
+	int status;
         char buf[1024];
         tline * line;
         int i,j;
+	char *input = "stdin"; //Creamos variable con la entrada estandar
+	char *output = "stdout"; //Creamos variable con la salida estandar
+	char *error = "stderr"; //Creamos variable con la salida de error estandar
+
 
         printf("==> "); 
         while (fgets(buf, 1024, stdin)) {
@@ -15,19 +30,35 @@ int main(void) {
                         continue;
                 }
                 if (line->redirect_input != NULL) {
-                        printf("redirección de entrada: %s\n", line->redirect_input);
+			input = line->redirect_input;
                 }
                 if (line->redirect_output != NULL) {
-                        printf("redirección de salida: %s\n", line->redirect_output);
+			output = line->redirect_output;
                 }
                 if (line->redirect_error != NULL) {
-                        printf("redirección de error: %s\n", line->redirect_error);
+                       error = line->redirect_error;
                 }
                 if (line->background) {
                         printf("comando a ejecutarse en background\n");
                 } 
                 for (i=0; i<line->ncommands; i++) {
-                        printf("orden %d (%s):\n", i, line->commands[i].filename);
+			//Hago la ejecución para sólo uno con salida estándar, lo cambiaremos
+			pid = fork();
+			if(pid==0){
+				if(i==0){
+					execvp(line->commands[i].argv[0],line->commands[i].argv);
+					//Si llega es que se ha producido un error.
+					fprintf(stderr, "Error al ejecutar el comando %s\n",strerror(errno));
+					exit(1);
+				}
+			}
+			else{
+				wait (&status);
+               			if (WIFEXITED(status) != 0)
+                        		if (WEXITSTATUS(status) != 0)
+                                		printf("El comando no se ejecutó correctamente\n");
+			}
+			printf("orden %d (%s):\n", i, line->commands[i].filename);
                         for (j=0; j<line->commands[i].argc; j++) {
                                 printf("  argumento %d: %s\n", j, line->commands[i].argv[j]);
                         }
