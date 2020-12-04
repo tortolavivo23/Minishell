@@ -1,0 +1,9 @@
+total 1840
+-rw-rw-r-- 1 tortolavivo23 tortolavivo23     73 dic  4 13:42 archivo
+-rw-rw-r-- 1 tortolavivo23 tortolavivo23  20730 dic  1 13:54 libparser.a
+-rwxrwxr-x 1 tortolavivo23 tortolavivo23 921000 dic  4 13:34 minishell
+-rw-rw-r-- 1 tortolavivo23 tortolavivo23   3655 dic  4 13:34 minishell.c
+-rw-rw-r-- 1 tortolavivo23 tortolavivo23    267 dic  1 13:54 parser.h
+-rw-rw-r-- 1 tortolavivo23 tortolavivo23     12 dic  1 15:39 README.md
+-rwxrwxr-x 1 tortolavivo23 tortolavivo23 915296 dic  1 15:35 test
+-rw-rw-r-- 1 tortolavivo23 tortolavivo23    879 dic  1 13:54 test.c

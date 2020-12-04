@@ -21,9 +21,9 @@ int main(void) {
     int i,j,outputfd,outputbool,inputfd,inputbool,errfd,errbool;
     //Las variables nos serviran para obtener los descriptores de ficherosy para saber si se ha
     //realizado la redireccion mencionada
-	char *input = "stdin"; //Creamos variable con la entrada estandar
-	char *output = "stdout"; //Creamos variable con la salida estandar
-	char *error = "stderr"; //Creamos variable con la salida de eroutpror estandar
+	char *input; //Creamos variable con la entrada estandar
+	char *output; //Creamos variable con la salida estandar
+	char *error; //Creamos variable con la salida de eroutpror estandar
 
 
 
@@ -39,13 +39,15 @@ int main(void) {
             continue;
         }
         if (line->redirect_input != NULL) {
-            input = line->redirect_input;
+	    inputbool = 1;
+	    input = line->redirect_input;
         }
         if (line->redirect_output != NULL) {
             outputbool=1;
             output = line->redirect_output;
         }
         if (line->redirect_error != NULL) {
+	    errbool = 1;
             error = line->redirect_error;
         }
         if (line->background) {
