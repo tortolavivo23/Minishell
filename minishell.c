@@ -39,15 +39,15 @@ int main(void) {
             continue;
         }
         if (line->redirect_input != NULL) {
-	    inputbool = 1;
-	    input = line->redirect_input;
+	        inputbool = 1;
+	        input = line->redirect_input;
         }
         if (line->redirect_output != NULL) {
             outputbool=1;
             output = line->redirect_output;
         }
         if (line->redirect_error != NULL) {
-	    errbool = 1;
+	        errbool = 1;
             error = line->redirect_error;
         }
         if (line->background) {
@@ -66,11 +66,37 @@ int main(void) {
                             //En caso de erro no se ejecuta el comando, pero no terminara la ejecucion de la shell
                             printf("Error en la redireccion de la salida");
                             exit(1);
-                        }else{
+                        }
+                        else{
                             //Redirigimos el descriptor de fichero 1(salida) al del file abierto
                             dup2(outputfd,1);
                         }
                     }
+                    //Comprobacion de la redireccion de la entrada standard
+                    if(inputbool==1){
+                        inputfd=open(input,O_RDONLY);
+                        if(inputfd==-1){
+                            printf("Error en la redireccion de entrada");
+                            exit(1);
+                        }
+                        else{
+                            dup2(inputfd,0);
+                        }
+                    }
+
+                    if(errbool==1){
+                        errfd=open(error,O_WRONLY);
+                        if(errfd==-1){
+                            printf("Error en la redireccion de la salida de error");
+                            exit(1);
+                        }
+                        else{
+                            dup2(errfd,2);
+                        }
+                    }
+
+
+
                     //Por ahora solo ejecutamos el primer comando
                     execvp(line->commands[i].argv[0],line->commands[i].argv);
                     //Si llega es que se ha producido un error.
