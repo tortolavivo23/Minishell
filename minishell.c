@@ -177,7 +177,6 @@ int main(void) {
         for (i = 0; i < line->ncommands; i++) {
             wait(NULL);
         }
-
         printf("==> ");
     }
     return 0;
