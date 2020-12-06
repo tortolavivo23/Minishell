@@ -70,7 +70,7 @@ int main(void) {
                     if (inputbool == 1) {
                         inputfd = open(input, O_RDONLY);
                         if (inputfd == -1) {
-                            printf("Error en la redireccion de entrada");
+                            printf("Error en la redireccion de entrada\n");
                             exit(1);
                         } else {
                             dup2(inputfd, 0);
@@ -162,6 +162,7 @@ int main(void) {
         }
         printf("==> ");
     }
+    printf("\n");
     return 0;
 }
 
