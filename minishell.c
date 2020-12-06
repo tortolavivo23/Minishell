@@ -77,13 +77,13 @@ int main(void) {
                         }
                     }
                 } else {
-                    if(i%2==0){
+                    if(i%2==0){ //Si el proceso es par, cerramos el extremo de escritura de p1, el de lectura de p2 y redireccionamos el extremo de lectura de p1 a stdin
                         close(p1[1]);
                         close (p2[0]);
                         dup2(p1[0],0);
                         close (p1[0]);
                     }
-                    else{
+                    else{ //Si el proceso es impar hacemos lo mismo pero cambiando los pipes.
                         close (p1[0]);
                         close (p2[1]);
                         dup2(p2[0],0);
@@ -93,7 +93,7 @@ int main(void) {
 
                 //Si es el último proceso redirigimos la salida
                 if (i == line->ncommands - 1) {
-                    if(i%2==0){
+                    if(i%2==0){ //Si es el último proceso, cerramos el único extremo de escritura que queda abierto.
                         close(p2[1]);
                     }
                     else{
@@ -122,7 +122,7 @@ int main(void) {
                     }
                 }
                 else {
-                    if(i%2==0){
+                    if(i%2==0){ //Redirecciono stdout a la entrada del pipe.
                         dup2(p2[1],1);
                         close(p2[1]);
                     }
@@ -131,7 +131,7 @@ int main(void) {
                         close(p1[1]);
                     }
                 }
-                //Por ahora solo ejecutamos el primer comando
+                //Ejecutamos el comando
                 execvp(line->commands[i].argv[0], line->commands[i].argv);
                 //Si llega es que se ha producido un error.
                 fprintf(stderr, "Error al ejecutar el comando %s\n", strerror(errno));
@@ -139,42 +139,25 @@ int main(void) {
             }
 
             else {
-                if(i%2==0){
+                if(i%2==0){ //Cerramos p1 y lo volvemos a abrir sin ningún valor si estamos en una iteración par
                     close(p1[0]);
                     close(p1[1]);
                     pipe(p1);
                 }
-                else{
+                else{ //Hacemos lo mismo con p2 si estamos en una iteración impar
                     close(p2[0]);
                     close(p2[1]);
                     pipe(p2);
                 }
             }
-
-                /*
-                //Estamos en el padre, espera a que acabe el hijo
-                wait(&status);
-                if (WIFEXITED(status) != 0)
-                    if (WEXITSTATUS(status) != 0)
-                        //Comprobaciones de la correcta ejercucion del comando
-                        printf("El comando no se ejecutó correctamente\n");
-
-            }
-
-
-            //Mantenemos la definicion de los comandos otorgado por el test
-
-            printf("orden %d (%s):\n", i, line->commands[i].filename);
-            for (j = 0; j < line->commands[i].argc; j++) {
-                printf("  argumento %d: %s\n", j, line->commands[i].argv[j]);
-            }
-             */
         }
+        //Cerramos el pipe por si se quedara abierto
         close(p1[0]);
         close(p1[1]);
         close(p2[0]);
         close(p2[1]);
         for (i = 0; i < line->ncommands; i++) {
+            //Esperamos que acaben todos los procesos
             wait(NULL);
         }
         printf("==> ");
