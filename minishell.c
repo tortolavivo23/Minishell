@@ -137,8 +137,21 @@ int main(void) {
                 fprintf(stderr, "Error al ejecutar el comando %s\n", strerror(errno));
                 exit(1);
             }
-            /*
+
             else {
+                if(i%2==0){
+                    close(p1[0]);
+                    close(p1[1]);
+                    pipe(p1);
+                }
+                else{
+                    close(p2[0]);
+                    close(p2[1]);
+                    pipe(p2);
+                }
+            }
+
+                /*
                 //Estamos en el padre, espera a que acabe el hijo
                 wait(&status);
                 if (WIFEXITED(status) != 0)
@@ -164,6 +177,7 @@ int main(void) {
         for (i = 0; i < line->ncommands; i++) {
             wait(NULL);
         }
+
         printf("==> ");
     }
     return 0;
