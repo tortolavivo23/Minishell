@@ -56,40 +56,37 @@ int main(void) {
         if (line->background) {
             printf("comando a ejecutarse en background\n");
         }
-        if(strcmp(line->commands[0].argv[0],"cd")==0){
-            pid = fork();
-            if (pid == 0) {
-                if (line->ncommands > 1) {
-                    printf("Uso: \ncd RUTA\n");
-                    exit(2);
-                } else {
-                    if (line->commands[0].argc == 1) {
-                        ruta = getenv("HOME");
-                        if (ruta == NULL) {
-                            fprintf(stderr, "No existe la variable $HOME\n");
-                            exit(1);
-                        }
-                    } else if (line->commands[0].argc == 2) {
-                        ruta = line->commands[0].argv[1];
-                    } else {
-                        printf("Uso: \ncd RUTA\n");
-                        exit(2);
-                    }
-                    if (chdir(ruta) != 0) {
-                        fprintf(stderr, "Error al cambiar de directorio: %s\n", strerror(errno));
-                        exit(3);
-                    }
-                    printf("El directorio actual es: %s\n", getcwd(buf, -1));
-                }
-            }
-        }
+
         else {
             for (i = 0; i < line->ncommands; i++) {
                 //Hago la ejecución para sólo uno con salida estándar, lo cambiaremos
                 pid = fork();
+
                 if (pid == 0) {
                     //Estamos es en el hijo
-
+                    if(strcmp(line->commands[i].argv[0],"cd")==0){//Si es un cd, tenemos que hacer la instrucción de otra forma
+                        if(line->ncommands>1){
+                            exit(0);//Si hay más de un comando el cd no se ejecuta
+                        }
+                        if (line->commands[i].argc == 1) {
+                            ruta = getenv("HOME");
+                            if (ruta == NULL) {
+                                fprintf(stderr, "No existe la variable $HOME\n");
+                                exit(1);
+                            }
+                        } else if (line->commands[i].argc == 2) {
+                            ruta = line->commands[0].argv[1];
+                        } else {
+                            printf("Uso: \ncd RUTA\n");
+                            exit(2);
+                        }
+                        if (chdir(ruta) != 0) {
+                            fprintf(stderr, "Error al cambiar de directorio: %s\n", strerror(errno));
+                            exit(3);
+                        }
+                        printf("El directorio actual es: %s\n", getcwd(buf, -1));
+                        exit (0);
+                    }
                     //Si es el primer proceso redirigimos la entrada
                     if (i == 0) {
                         close(p2[0]);//Si es el primer proceso cerramos el extremo de lectura del pipe
