@@ -19,7 +19,7 @@ int main(void) {
     char buf[1024];
     char *ruta;
     tline *line;
-    int i, j, outputfd, outputbool, inputfd, inputbool, errfd, errbool, ind;
+    int i, j, outputfd, outputbool, inputfd, inputbool, errfd, errbool,cdbool, ind;
     //Las variables nos serviran para obtener los descriptores de ficherosy para saber si se ha
     //realizado la redireccion mencionada
     char *input; //Creamos variable con la entrada estandar
@@ -36,6 +36,7 @@ int main(void) {
         inputbool = 0;
         outputbool = 0;
         errbool = 0;
+        cdbool = 0;
         ind = 0; //Para las instrucciones como el cd.
 
         line = tokenize(buf);
@@ -58,23 +59,25 @@ int main(void) {
             printf("comando a ejecutarse en background\n");
         }
         if (strcmp(line->commands[0].argv[0], "cd") == 0) {//Si es un cd, tenemos que hacer la instrucción de otra forma
-            ind = ind + 1;
+            ind++;
             if (line->ncommands == 1) {//Si hay más de un comando el cd no se ejecuta
-                if (line->commands[0].argc == 1) {
+                if (line->commands[0].argc == 1) { //Si hay sólo un argumento, hacemos cd a $HOME
                     ruta = getenv("HOME");
-                    if (ruta == NULL) {
+                    if (ruta == NULL) { //Si $HOME es nulo, da un error, si no ponemos que se va a intentar el cambio de directorio
                         fprintf(stderr, "No existe la variable $HOME\n");
-                        exit(1);
                     }
-                } else if (line->commands[0].argc == 2) {
+                    else{
+                        cdbool=1;
+                    }
+                } else if (line->commands[0].argc == 2) { //Si tiene dos argumentos el segundo es la nueva ruta, y ponemos que se va a intentar el cambio de directorio
                     ruta = line->commands[0].argv[1];
-                } else {
+                    cdbool=1;
+                } else { //Si el número de argumentos no coincido con los necesarios ponemos explicación del uso.
                     printf("Uso: \ncd RUTA\n");
                 }
-                if (line->commands[0].argc <= 2) {
-                    if (chdir(ruta) != 0) {
+                if (cdbool) {
+                    if (chdir(ruta) != 0) { //Se intenta el cambio de directorio
                         fprintf(stderr, "Error al cambiar de directorio: %s\n", strerror(errno));
-                        exit(3);
                     } else {
                         printf("El directorio actual es: %s\n", getcwd(buf, -1));
                     }
