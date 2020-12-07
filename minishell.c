@@ -19,7 +19,7 @@ int main(void) {
     char buf[1024];
     char *ruta;
     tline *line;
-    int i, j, outputfd, outputbool, inputfd, inputbool, errfd, errbool;
+    int i, j, outputfd, outputbool, inputfd, inputbool, errfd, errbool, ind;
     //Las variables nos serviran para obtener los descriptores de ficherosy para saber si se ha
     //realizado la redireccion mencionada
     char *input; //Creamos variable con la entrada estandar
@@ -36,6 +36,7 @@ int main(void) {
         inputbool = 0;
         outputbool = 0;
         errbool = 0;
+        ind = 0; //Para las instrucciones como el cd.
 
         line = tokenize(buf);
         if (line == NULL) {
@@ -56,122 +57,123 @@ int main(void) {
         if (line->background) {
             printf("comando a ejecutarse en background\n");
         }
-
-        else {
-            for (i = 0; i < line->ncommands; i++) {
-                //Hago la ejecución para sólo uno con salida estándar, lo cambiaremos
-                pid = fork();
-
-                if (pid == 0) {
-                    //Estamos es en el hijo
-                    if(strcmp(line->commands[i].argv[0],"cd")==0){//Si es un cd, tenemos que hacer la instrucción de otra forma
-                        if(line->ncommands>1){
-                            exit(0);//Si hay más de un comando el cd no se ejecuta
-                        }
-                        if (line->commands[i].argc == 1) {
-                            ruta = getenv("HOME");
-                            if (ruta == NULL) {
-                                fprintf(stderr, "No existe la variable $HOME\n");
-                                exit(1);
-                            }
-                        } else if (line->commands[i].argc == 2) {
-                            ruta = line->commands[0].argv[1];
-                        } else {
-                            printf("Uso: \ncd RUTA\n");
-                            exit(2);
-                        }
-                        if (chdir(ruta) != 0) {
-                            fprintf(stderr, "Error al cambiar de directorio: %s\n", strerror(errno));
-                            exit(3);
-                        }
+        if (strcmp(line->commands[0].argv[0], "cd") == 0) {//Si es un cd, tenemos que hacer la instrucción de otra forma
+            ind = ind + 1;
+            if (line->ncommands == 1) {//Si hay más de un comando el cd no se ejecuta
+                if (line->commands[0].argc == 1) {
+                    ruta = getenv("HOME");
+                    if (ruta == NULL) {
+                        fprintf(stderr, "No existe la variable $HOME\n");
+                        exit(1);
+                    }
+                } else if (line->commands[0].argc == 2) {
+                    ruta = line->commands[0].argv[1];
+                } else {
+                    printf("Uso: \ncd RUTA\n");
+                }
+                if (line->commands[0].argc <= 2) {
+                    if (chdir(ruta) != 0) {
+                        fprintf(stderr, "Error al cambiar de directorio: %s\n", strerror(errno));
+                        exit(3);
+                    } else {
                         printf("El directorio actual es: %s\n", getcwd(buf, -1));
-                        exit (0);
                     }
-                    //Si es el primer proceso redirigimos la entrada
-                    if (i == 0) {
-                        close(p2[0]);//Si es el primer proceso cerramos el extremo de lectura del pipe
-                        close(p1[1]);
-                        close(p1[0]);//Si es el primer proceso cerramos todo el pipe
-                        //Comprobacion de la redireccion de la entrada standard
-                        if (inputbool == 1) {
-                            inputfd = open(input, O_RDONLY);
-                            if (inputfd == -1) {
-                                printf("Error en la redireccion de entrada\n");
-                                exit(1);
-                            } else {
-                                dup2(inputfd, 0);
-                            }
-                        }
-                    } else {
-                        if (i % 2 ==
-                            0) { //Si el proceso es par, cerramos el extremo de escritura de p1, el de lectura de p2 y redireccionamos el extremo de lectura de p1 a stdin
-                            close(p1[1]);
-                            close(p2[0]);
-                            dup2(p1[0], 0);
-                            close(p1[0]);
-                        } else { //Si el proceso es impar hacemos lo mismo pero cambiando los pipes.
-                            close(p1[0]);
-                            close(p2[1]);
-                            dup2(p2[0], 0);
-                            close(p2[0]);
-                        }
-                    }
-
-                    //Si es el último proceso redirigimos la salida
-                    if (i == line->ncommands - 1) {
-                        if (i % 2 ==
-                            0) { //Si es el último proceso, cerramos el único extremo de escritura que queda abierto.
-                            close(p2[1]);
+                }
+            }
+        }
+        for (i = ind; i < line->ncommands; i++) {
+            //Hago la ejecución para sólo uno con salida estándar, lo cambiaremos
+            pid = fork();
+            if (pid == 0) {
+                //Estamos es en el hijo
+                if (strcmp(line->commands[i].argv[0], "cd") ==
+                    0) {//Si es un cd en medio de muchas instrucciones no tiene que hacer nada
+                    exit(0);
+                }
+                //Si es el primer proceso redirigimos la entrada
+                if (i == 0) {
+                    close(p2[0]);//Si es el primer proceso cerramos el extremo de lectura del pipe
+                    close(p1[1]);
+                    close(p1[0]);//Si es el primer proceso cerramos todo el pipe
+                    //Comprobacion de la redireccion de la entrada standard
+                    if (inputbool == 1) {
+                        inputfd = open(input, O_RDONLY);
+                        if (inputfd == -1) {
+                            printf("Error en la redireccion de entrada\n");
+                            exit(1);
                         } else {
-                            close(p1[1]);
-                        }
-                        //Comprobacion de la redireccion de la salida standard
-                        if (outputbool == 1) {
-                            outputfd = open(output, O_WRONLY);
-                            if (outputfd == -1) {
-                                //En caso de erro no se ejecuta el comando, pero no terminara la ejecucion de la shell
-                                printf("Error en la redireccion de la salida");
-                                exit(1);
-                            } else {
-                                //Redirigimos el descriptor de fichero 1(salida) al del file abierto
-                                dup2(outputfd, 1);
-                            }
-                        }
-                        if (errbool == 1) {
-                            errfd = open(error, O_WRONLY);
-                            if (errfd == -1) {
-                                printf("Error en la redireccion de la salida de error");
-                                exit(1);
-                            } else {
-                                dup2(errfd, 2);
-                            }
-                        }
-                    } else {
-                        if (i % 2 == 0) { //Redirecciono stdout a la entrada del pipe.
-                            dup2(p2[1], 1);
-                            close(p2[1]);
-                        } else {
-                            dup2(p1[1], 1);
-                            close(p1[1]);
+                            dup2(inputfd, 0);
                         }
                     }
-                    //Ejecutamos el comando
-                    execvp(line->commands[i].argv[0], line->commands[i].argv);
-                    //Si llega es que se ha producido un error.
-                    fprintf(stderr, "Error al ejecutar el comando %s: %s\n", line->commands[i].argv[0],
-                            strerror(errno));
-                    exit(1);
                 } else {
                     if (i % 2 ==
-                        0) { //Cerramos p1 y lo volvemos a abrir sin ningún valor si estamos en una iteración par
-                        close(p1[0]);
+                        0) { //Si el proceso es par, cerramos el extremo de escritura de p1, el de lectura de p2 y redireccionamos el extremo de lectura de p1 a stdin
                         close(p1[1]);
-                        pipe(p1);
-                    } else { //Hacemos lo mismo con p2 si estamos en una iteración impar
                         close(p2[0]);
+                        dup2(p1[0], 0);
+                        close(p1[0]);
+                    } else { //Si el proceso es impar hacemos lo mismo pero cambiando los pipes.
+                        close(p1[0]);
                         close(p2[1]);
-                        pipe(p2);
+                        dup2(p2[0], 0);
+                        close(p2[0]);
                     }
+                }
+
+                //Si es el último proceso redirigimos la salida
+                if (i == line->ncommands - 1) {
+                    if (i % 2 ==
+                        0) { //Si es el último proceso, cerramos el único extremo de escritura que queda abierto.
+                        close(p2[1]);
+                    } else {
+                        close(p1[1]);
+                    }
+                    //Comprobacion de la redireccion de la salida standard
+                    if (outputbool == 1) {
+                        outputfd = open(output, O_WRONLY);
+                        if (outputfd == -1) {
+                            //En caso de erro no se ejecuta el comando, pero no terminara la ejecucion de la shell
+                            printf("Error en la redireccion de la salida");
+                            exit(1);
+                        } else {
+                            //Redirigimos el descriptor de fichero 1(salida) al del file abierto
+                            dup2(outputfd, 1);
+                        }
+                    }
+                    if (errbool == 1) {
+                        errfd = open(error, O_WRONLY);
+                        if (errfd == -1) {
+                            printf("Error en la redireccion de la salida de error");
+                            exit(1);
+                        } else {
+                            dup2(errfd, 2);
+                        }
+                    }
+                } else {
+                    if (i % 2 == 0) { //Redirecciono stdout a la entrada del pipe.
+                        dup2(p2[1], 1);
+                        close(p2[1]);
+                    } else {
+                        dup2(p1[1], 1);
+                        close(p1[1]);
+                    }
+                }
+                //Ejecutamos el comando
+                execvp(line->commands[i].argv[0], line->commands[i].argv);
+                //Si llega es que se ha producido un error.
+                fprintf(stderr, "Error al ejecutar el comando %s: %s\n", line->commands[i].argv[0],
+                        strerror(errno));
+                exit(1);
+            } else {
+                if (i % 2 ==
+                    0) { //Cerramos p1 y lo volvemos a abrir sin ningún valor si estamos en una iteración par
+                    close(p1[0]);
+                    close(p1[1]);
+                    pipe(p1);
+                } else { //Hacemos lo mismo con p2 si estamos en una iteración impar
+                    close(p2[0]);
+                    close(p2[1]);
+                    pipe(p2);
                 }
             }
         }
@@ -189,3 +191,4 @@ int main(void) {
     printf("\n");
     return 0;
 }
+
