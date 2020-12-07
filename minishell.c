@@ -57,24 +57,30 @@ int main(void) {
             printf("comando a ejecutarse en background\n");
         }
         if(strcmp(line->commands[0].argv[0],"cd")==0){
-            if(line->ncommands>1){
-                printf("Uso: \ncd RUTA\n");
-            }
-            else {
-                if (line->commands[0].argc == 1) {
-                    ruta = getenv("HOME");
-                    if (ruta == NULL) {
-                        fprintf(stderr, "No existe la variable $HOME\n");
-                    }
-                } else if (line->commands[0].argc == 2) {
-                    ruta = line->commands[0].argv[1];
-                } else {
+            pid = fork();
+            if (pid == 0) {
+                if (line->ncommands > 1) {
                     printf("Uso: \ncd RUTA\n");
+                    exit(2);
+                } else {
+                    if (line->commands[0].argc == 1) {
+                        ruta = getenv("HOME");
+                        if (ruta == NULL) {
+                            fprintf(stderr, "No existe la variable $HOME\n");
+                            exit(1);
+                        }
+                    } else if (line->commands[0].argc == 2) {
+                        ruta = line->commands[0].argv[1];
+                    } else {
+                        printf("Uso: \ncd RUTA\n");
+                        exit(2);
+                    }
+                    if (chdir(ruta) != 0) {
+                        fprintf(stderr, "Error al cambiar de directorio: %s\n", strerror(errno));
+                        exit(3);
+                    }
+                    printf("El directorio actual es: %s\n", getcwd(buf, -1));
                 }
-                if (chdir(ruta) != 0) {
-                    fprintf(stderr, "Error al cambiar de directorio: %s\n", strerror(errno));
-                }
-                printf("El directorio actual es: %s\n", getcwd(buf, -1));
             }
         }
         else {
