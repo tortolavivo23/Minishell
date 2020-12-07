@@ -134,7 +134,7 @@ int main(void) {
                 //Ejecutamos el comando
                 execvp(line->commands[i].argv[0], line->commands[i].argv);
                 //Si llega es que se ha producido un error.
-                fprintf(stderr, "Error al ejecutar el comando %s\n", strerror(errno));
+                fprintf(stderr, "Error al ejecutar el comando %s: %s\n",line->commands[i].argv[0], strerror(errno));
                 exit(1);
             }
 
@@ -165,4 +165,3 @@ int main(void) {
     printf("\n");
     return 0;
 }
-
