@@ -10,6 +10,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="5a427c63-1ce9-4602-9c6d-3944ccac660a" name="Default Changelist" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cmake-build-debug/CMakeFiles/clion-log.txt" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug/CMakeFiles/clion-log.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/minishell" beforeDir="false" afterPath="$PROJECT_DIR$/minishell" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/minishell.c" beforeDir="false" afterPath="$PROJECT_DIR$/minishell.c" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -75,6 +78,8 @@
       <workItem from="1607269530334" duration="185000" />
       <workItem from="1607269766755" duration="2753000" />
       <workItem from="1607335459705" duration="3812000" />
+      <workItem from="1607860392324" duration="423000" />
+      <workItem from="1607875132632" duration="3951000" />
     </task>
     <servers />
   </component>

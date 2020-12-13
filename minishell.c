@@ -19,14 +19,15 @@ int main(void) {
     char buf[1024];
     char *ruta;
     tline *line;
-    int i, j, outputfd, outputbool, inputfd, inputbool, errfd, errbool,cdbool, ind;
+    int i, j, outputfd, outputbool, inputfd, inputbool, errfd, errbool,cdbool, ind, backg;
     //Las variables nos serviran para obtener los descriptores de ficherosy para saber si se ha
     //realizado la redireccion mencionada
     char *input; //Creamos variable con la entrada estandar
     char *output; //Creamos variable con la salida estandar
     char *error; //Creamos variable con la salida de eroutpror estandar
 
-
+    signal(SIGINT,SIG_IGN);
+    signal(SIGQUIT,SIG_IGN);
 
     printf("==> ");
     while (fgets(buf, 1024, stdin)) {
@@ -37,11 +38,13 @@ int main(void) {
         outputbool = 0;
         errbool = 0;
         cdbool = 0;
+        backg=0;
         ind = 0; //Para las instrucciones como el cd.
 
         line = tokenize(buf);
         if (line == NULL) {
             continue;
+            printf("hola");
         }
         if (line->redirect_input != NULL) {
             inputbool = 1;
@@ -56,38 +59,19 @@ int main(void) {
             error = line->redirect_error;
         }
         if (line->background) {
-            printf("comando a ejecutarse en background\n");
-        }
-        if (strcmp(line->commands[0].argv[0], "cd") == 0) {//Si es un cd, tenemos que hacer la instrucción de otra forma
-            ind++;
-            if (line->ncommands == 1) {//Si hay más de un comando el cd no se ejecuta
-                if (line->commands[0].argc == 1) { //Si hay sólo un argumento, hacemos cd a $HOME
-                    ruta = getenv("HOME");
-                    if (ruta == NULL) { //Si $HOME es nulo, da un error, si no ponemos que se va a intentar el cambio de directorio
-                        fprintf(stderr, "No existe la variable $HOME\n");
-                    }
-                    else{
-                        cdbool=1;
-                    }
-                } else if (line->commands[0].argc == 2) { //Si tiene dos argumentos el segundo es la nueva ruta, y ponemos que se va a intentar el cambio de directorio
-                    ruta = line->commands[0].argv[1];
-                    cdbool=1;
-                } else { //Si el número de argumentos no coincido con los necesarios ponemos explicación del uso.
-                    printf("Uso: \ncd RUTA\n");
-                }
-                if (cdbool) {
-                    if (chdir(ruta) != 0) { //Se intenta el cambio de directorio
-                        fprintf(stderr, "Error al cambiar de directorio: %s\n", strerror(errno));
-                    } else {
-                        printf("El directorio actual es: %s\n", getcwd(buf, -1));
-                    }
-                }
-            }
+            backg=1;
+            //printf("comando a ejecutarse en background\n");
         }
         for (i = ind; i < line->ncommands; i++) {
             //Hago la ejecución para sólo uno con salida estándar, lo cambiaremos
             pid = fork();
             if (pid == 0) {
+                if(backg==0){
+                    //El padre ignora sigint y sigquit si el proceso se realiza en background debe seguir asi,
+                    //en caso contrario (fg) deben realizar su accion por defecto:
+                    signal(SIGINT,SIG_DFL);
+                    signal(SIGQUIT,SIG_DFL);
+                }
                 //Estamos es en el hijo
                 if (strcmp(line->commands[i].argv[0], "cd") ==
                     0) {//Si es un cd en medio de muchas instrucciones no tiene que hacer nada
@@ -185,10 +169,15 @@ int main(void) {
         close(p1[1]);
         close(p2[0]);
         close(p2[1]);
-        for (i = 0; i < line->ncommands; i++) {
-            //Esperamos que acaben todos los procesos
-            wait(NULL);
+        if(backg==0){
+            for (i = 0; i < line->ncommands; i++) {
+                //Esperamos que acaben todos los procesos
+                waitpid(pid,&status,0);
+            }
+        }else{
+            printf("[%i]\n",pid);
         }
+
         printf("==> ");
     }
     printf("\n");
