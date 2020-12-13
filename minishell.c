@@ -21,14 +21,15 @@ int main(void) {
     char buf[1024];
     char *ruta;
     tline *line;
-    int i, j, outputfd, outputbool, inputfd, inputbool, errfd, errbool, ind;
+    int i, j, outputfd, outputbool, inputfd, inputbool, errfd, errbool, ind, backg;
     //Las variables nos serviran para obtener los descriptores de ficherosy para saber si se ha
     //realizado la redireccion mencionada
     char *input; //Creamos variable con la entrada estandar
     char *output; //Creamos variable con la salida estandar
     char *error; //Creamos variable con la salida de eroutpror estandar
 
-
+    signal(SIGINT,SIG_IGN);
+    signal(SIGQUIT,SIG_IGN);
 
     printf("==> ");
     while (fgets(buf, 1024, stdin)) {
@@ -39,6 +40,7 @@ int main(void) {
         outputbool = 0;
         errbool = 0;
         ind = 0; //Para las instrucciones como el cd.
+        backg=0;
 
         line = tokenize(buf);
         if (line == NULL) {
@@ -57,7 +59,7 @@ int main(void) {
             error = line->redirect_error;
         }
         if (line->background) {
-            printf("comando a ejecutarse en background\n");
+            backg=1;
         }
         if ((line->ncommands>=1)&&(strcmp(line->commands[0].argv[0], "cd")== 0)) {//Si es un cd, tenemos que hacer la instrucción de otra forma
             ind++;
@@ -70,6 +72,12 @@ int main(void) {
             pid = fork();
             if (pid == 0) {
                 //Estamos es en el hijo
+                if(backg==0){
+                    //El padre ignora sigint y sigquit si el proceso se realiza en background debe seguir asi,
+                    //en caso contrario (fg) deben realizar su accion por defecto:
+                    signal(SIGINT,SIG_DFL);
+                    signal(SIGQUIT,SIG_DFL);
+                }
                 if (strcmp(line->commands[i].argv[0], "cd") ==
                     0) {//Si es un cd en medio de muchas instrucciones no tiene que hacer nada
                     exit(0);
@@ -166,9 +174,13 @@ int main(void) {
         close(p1[1]);
         close(p2[0]);
         close(p2[1]);
-        for (i = 0; i < line->ncommands; i++) {
-            //Esperamos que acaben todos los procesos
-            wait(NULL);
+        if(backg==0){
+            for (i = ind; i < line->ncommands; i++) {
+                //Esperamos que acaben todos los procesos
+                waitpid(pid,&status,0);
+            }
+        }else{
+            printf("[%i]\n",pid);
         }
         printf("==> ");
     }
