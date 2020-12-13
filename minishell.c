@@ -10,6 +10,8 @@
 #include <fcntl.h>
 
 
+int cd (int argc, char *argv[]);
+
 int main(void) {
     pid_t pid;
     int p1[2];
@@ -19,7 +21,7 @@ int main(void) {
     char buf[1024];
     char *ruta;
     tline *line;
-    int i, j, outputfd, outputbool, inputfd, inputbool, errfd, errbool,cdbool, ind;
+    int i, j, outputfd, outputbool, inputfd, inputbool, errfd, errbool, ind;
     //Las variables nos serviran para obtener los descriptores de ficherosy para saber si se ha
     //realizado la redireccion mencionada
     char *input; //Creamos variable con la entrada estandar
@@ -36,7 +38,6 @@ int main(void) {
         inputbool = 0;
         outputbool = 0;
         errbool = 0;
-        cdbool = 0;
         ind = 0; //Para las instrucciones como el cd.
 
         line = tokenize(buf);
@@ -58,30 +59,10 @@ int main(void) {
         if (line->background) {
             printf("comando a ejecutarse en background\n");
         }
-        if (strcmp(line->commands[0].argv[0], "cd") == 0) {//Si es un cd, tenemos que hacer la instrucción de otra forma
+        if ((line->ncommands>=1)&&(strcmp(line->commands[0].argv[0], "cd")== 0)) {//Si es un cd, tenemos que hacer la instrucción de otra forma
             ind++;
             if (line->ncommands == 1) {//Si hay más de un comando el cd no se ejecuta
-                if (line->commands[0].argc == 1) { //Si hay sólo un argumento, hacemos cd a $HOME
-                    ruta = getenv("HOME");
-                    if (ruta == NULL) { //Si $HOME es nulo, da un error, si no ponemos que se va a intentar el cambio de directorio
-                        fprintf(stderr, "No existe la variable $HOME\n");
-                    }
-                    else{
-                        cdbool=1;
-                    }
-                } else if (line->commands[0].argc == 2) { //Si tiene dos argumentos el segundo es la nueva ruta, y ponemos que se va a intentar el cambio de directorio
-                    ruta = line->commands[0].argv[1];
-                    cdbool=1;
-                } else { //Si el número de argumentos no coincido con los necesarios ponemos explicación del uso.
-                    printf("Uso: \ncd RUTA\n");
-                }
-                if (cdbool) {
-                    if (chdir(ruta) != 0) { //Se intenta el cambio de directorio
-                        fprintf(stderr, "Error al cambiar de directorio: %s\n", strerror(errno));
-                    } else {
-                        printf("El directorio actual es: %s\n", getcwd(buf, -1));
-                    }
-                }
+                cd(line->commands[0].argc, line->commands[0].argv);
             }
         }
         for (i = ind; i < line->ncommands; i++) {
@@ -193,5 +174,30 @@ int main(void) {
     }
     printf("\n");
     return 0;
+}
+
+int cd(int argc, char *argv[]){
+    char buffer[1024];
+    char *ruta;
+    if (argc==1) { //Si no se le pasa ruta hacemos cd a home
+        ruta = getenv("HOME");
+        if (ruta == NULL) { //Si $HOME es nulo, da un error, si no ponemos que se va a intentar el cambio de directorio
+            fprintf(stderr, "No existe la variable $HOME\n");
+            return (1);
+        }
+    }
+    else if(argc==2){
+        ruta = argv[1];
+    }
+    else{
+        printf("Uso: \ncd RUTA\n");
+        return (2);
+    }
+    if (chdir(ruta)!=0) {//Se intenta el cambio de directorio
+        fprintf(stderr, "Error al cambiar de directorio: %s\n", strerror(errno));
+        return (2);
+    }
+    printf("El directorio actual es: %s\n", getcwd(buffer, -1));
+    return (0);
 }
 
