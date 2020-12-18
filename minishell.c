@@ -347,12 +347,19 @@ int cd(int argc, char *argv[]){
 }
 
 struct lista *jobs(struct lista *l){
-    struct lista *p;
-    l=hecho(l);
+    struct lista *p, *g;
+    int status;
     p=l;
     while(p!=NULL){
-            printf("[%d] EJECUTANDO  %s", p->datos->ind, p->datos->inst);
-            p=p->sig;
+        g=p->sig;
+        if(waitpid(p->datos->pid, &status, WNOHANG) > 0){
+            l=elimina(l,p->datos,equals);
         }
+        else {
+            printf("[%d] EJECUTANDO  %s", p->datos->ind, p->datos->inst);
+        }
+        p=g;
+    }
+    return l;
 }
 
