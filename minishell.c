@@ -10,12 +10,102 @@
 #include <fcntl.h>
 
 
+struct dato {
+    pid_t pid;
+    int ind;
+};
+
+struct lista { /* lista simple enlazada */
+    struct dato *datos;
+    struct lista *sig;
+};
+
+/* Devuelve la longitud de una lista */
+int longitudl(struct lista *l) {
+    struct lista *p;
+    int n;
+    n = 0;
+    p = l;
+    while (p != NULL) {
+        ++n;
+        p = p->sig;
+    }
+    return n;
+}
+
+struct lista *creanodo(void) {
+    return (struct lista *) malloc(sizeof(struct lista));
+}
+
+/* Inserta dato al final de la lista (para colas) */
+struct lista *insertafinal(struct lista *l, struct dato *x) {
+    struct lista *p,*q;
+    q = creanodo(); /* crea un nuevo nodo */
+    q->datos = x; /* copiar los datos */
+    q->sig = NULL;
+    if (l == NULL)
+        return q;
+    /* la lista argumento no es vacía. Situarse en el último */
+    p = l;
+    while (p->sig != NULL)
+        p = p->sig;
+    p->sig = q;
+    return l;
+}
+
+struct lista *elimina(struct lista *p, struct dato *x, int (*f)(struct dato *a, struct dato *b)) {
+    int cond;
+    if (p == NULL) /* no hay nada que borrar */
+        return p;
+    /* compara el dato */
+    cond = (*f)(x,p->datos);
+    if (cond == 0) { /* encontrado! */
+        struct lista *q;
+        q = p->sig;
+        free(p); /* libera la memoria y hemos perdido el enlace, por eso se guarda en q */
+        p = q; /* restaurar p al nuevo valor */
+    } else /* no encontrado */
+        p->sig = elimina(p->sig,x,f); /* recurre */
+    return p;
+}
+
+/* anula una lista liberando la memoria */
+struct lista *anulalista(struct lista *l) {
+    struct lista *p,*q;
+    p = l;
+    while (p != NULL) {
+        q = p->sig; /* para no perder el nodo */
+        free(p);
+        p = q;
+    }
+    return NULL;
+}
+
+struct dato * datoFinal(struct lista *l) {
+    struct lista *p;
+
+    if (l == NULL)
+        return NULL;
+    /* la lista argumento no es vacía. Situarse en el último */
+    p = l;
+    while (p->sig != NULL)
+        p = p->sig;
+    return p->datos;
+}
+
+
+
+
 int cd (int argc, char *argv[]);
 
 int main(void) {
     pid_t pid;
+    pid_t pid1;
     int p1[2];
     int p2[2];
+
+    struct lista *l; /* declaración */
+    l = NULL; /* inicialización */
 
     int status;
     char buf[1024];
@@ -60,6 +150,15 @@ int main(void) {
         }
         if (line->background) {
             backg=1;
+            pid1 = fork();
+            if(pid1!=0){
+                printf("==> ");
+                continue;
+            }
+            else{
+                struct dato *d1=(struct dato *) malloc(sizeof(struct dato));
+                struct dato *d2= datoFinal(l);
+            }
         }
         if ((line->ncommands>=1)&&(strcmp(line->commands[0].argv[0], "cd")== 0)) {//Si es un cd, tenemos que hacer la instrucción de otra forma
             ind++;
@@ -174,17 +273,19 @@ int main(void) {
         close(p1[1]);
         close(p2[0]);
         close(p2[1]);
-        if(backg==0){
-            for (i = ind; i < line->ncommands; i++) {
-                //Esperamos que acaben todos los procesos
-                waitpid(pid,&status,0);
-            }
-        }else{
-            printf("[%i]\n",pid);
+
+        for (i = ind; i < line->ncommands; i++) {
+            //Esperamos que acaben todos los procesos
+            waitpid(pid,&status,0);
+        }
+        if(backg==1) {
+            printf("bg finalizado \n");
+            exit(0);
         }
         printf("==> ");
     }
     printf("\n");
+    l=anulalista(l);
     return 0;
 }
 
