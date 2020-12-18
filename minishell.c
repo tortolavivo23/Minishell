@@ -68,7 +68,7 @@ int main(void) {
             }
         }
         for (i = ind; i < line->ncommands; i++) {
-            //Hago la ejecución para sólo uno con salida estándar, lo cambiaremos
+            //Ejecucion de los procesos
             pid = fork();
             if (pid == 0) {
                 //Estamos es en el hijo
@@ -82,7 +82,8 @@ int main(void) {
                     0) {//Si es un cd en medio de muchas instrucciones no tiene que hacer nada
                     exit(0);
                 }
-                //Si es el primer proceso redirigimos la entrada
+                //Redirecciones de la entrada:
+                //Si es el primer proceso redirigimos la entrada standar si es necesario
                 if (i == 0) {
                     close(p2[0]);//Si es el primer proceso cerramos el extremo de lectura del pipe
                     close(p1[1]);
@@ -111,8 +112,8 @@ int main(void) {
                         close(p2[0]);
                     }
                 }
-
-                //Si es el último proceso redirigimos la salida
+                //Redirecciones de la salida:
+                //Si es el último proceso redirigimos la salida standar si es necesario:
                 if (i == line->ncommands - 1) {
                     if (i % 2 ==
                         0) { //Si es el último proceso, cerramos el único extremo de escritura que queda abierto.
