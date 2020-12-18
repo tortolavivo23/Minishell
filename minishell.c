@@ -116,7 +116,7 @@ struct lista *hecho(struct lista *l){
 
 
 int cd (int argc, char *argv[]);
-void jobs(struct lista *l);
+struct lista *jobs(struct lista *l);
 
 int main(void) {
     pid_t pid;
@@ -197,7 +197,7 @@ int main(void) {
         if ((line->ncommands>=1)&&(strcmp(line->commands[0].argv[0], "jobs")== 0)) {//Si es un jobs, tenemos que hacer la instrucción de otra forma
             ind++;
             if (line->ncommands == 1) {//Si hay más de un comando el jobs no se ejecuta
-                jobs(l);
+                l=jobs(l);
             }
         }
         for (i = ind; i < line->ncommands; i++) {
@@ -346,9 +346,9 @@ int cd(int argc, char *argv[]){
     return (0);
 }
 
-void jobs(struct lista *l){
+struct lista *jobs(struct lista *l){
     struct lista *p;
-
+    l=hecho(l);
     p=l;
     while(p!=NULL){
             printf("[%d] EJECUTANDO  %s", p->datos->ind, p->datos->inst);
