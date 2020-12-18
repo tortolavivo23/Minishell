@@ -10,8 +10,10 @@
 #include <fcntl.h>
 
 
+
 struct dato {
     pid_t pid;
+    char inst[1024];
     int ind;
 };
 
@@ -43,8 +45,9 @@ struct lista *insertafinal(struct lista *l, struct dato *x) {
     q = creanodo(); /* crea un nuevo nodo */
     q->datos = x; /* copiar los datos */
     q->sig = NULL;
-    if (l == NULL)
+    if (l == NULL) {
         return q;
+    }
     /* la lista argumento no es vacía. Situarse en el último */
     p = l;
     while (p->sig != NULL)
@@ -59,7 +62,8 @@ struct lista *elimina(struct lista *p, struct dato *x, int (*f)(struct dato *a, 
         return p;
     /* compara el dato */
     cond = (*f)(x,p->datos);
-    if (cond == 0) { /* encontrado! */
+    if (cond == 0) {/* encontrado! */
+        printf("[%d] HECHO  %s", p->datos->ind, p->datos->inst);
         struct lista *q;
         q = p->sig;
         free(p); /* libera la memoria y hemos perdido el enlace, por eso se guarda en q */
@@ -67,6 +71,15 @@ struct lista *elimina(struct lista *p, struct dato *x, int (*f)(struct dato *a, 
     } else /* no encontrado */
         p->sig = elimina(p->sig,x,f); /* recurre */
     return p;
+}
+
+int equals(struct dato *a, struct dato *b){
+    if(a->pid==b->pid){
+        return 0;
+    }
+    else{
+        return 1;
+    }
 }
 
 /* anula una lista liberando la memoria */
@@ -81,9 +94,8 @@ struct lista *anulalista(struct lista *l) {
     return NULL;
 }
 
-struct dato * datoFinal(struct lista *l) {
+struct dato *datoFinal(struct lista *l) {
     struct lista *p;
-
     if (l == NULL)
         return NULL;
     /* la lista argumento no es vacía. Situarse en el último */
@@ -93,10 +105,18 @@ struct dato * datoFinal(struct lista *l) {
     return p->datos;
 }
 
-
+struct lista *hecho(struct lista *l){
+    struct dato *d=(struct dato *) malloc(sizeof(struct dato));
+    int status;
+    while ((d->pid = waitpid(-1, &status, WNOHANG)) > 0) {
+        l = elimina(l, d, equals);
+    }
+    return l;
+}
 
 
 int cd (int argc, char *argv[]);
+void jobs(struct lista *l);
 
 int main(void) {
     pid_t pid;
@@ -152,18 +172,32 @@ int main(void) {
             backg=1;
             pid1 = fork();
             if(pid1!=0){
-                printf("==> ");
-                continue;
-            }
-            else{
                 struct dato *d1=(struct dato *) malloc(sizeof(struct dato));
                 struct dato *d2= datoFinal(l);
+                if(d2 == NULL){
+                    d1->ind=1;
+                }
+                else {
+                    d1->ind = d2->ind + 1;
+                }
+                d1->pid = pid1;
+                strcpy(d1->inst, buf);
+                l=insertafinal(l, d1);
+                l=hecho(l);
+                printf("==> ");
+                continue;
             }
         }
         if ((line->ncommands>=1)&&(strcmp(line->commands[0].argv[0], "cd")== 0)) {//Si es un cd, tenemos que hacer la instrucción de otra forma
             ind++;
             if (line->ncommands == 1) {//Si hay más de un comando el cd no se ejecuta
                 cd(line->commands[0].argc, line->commands[0].argv);
+            }
+        }
+        if ((line->ncommands>=1)&&(strcmp(line->commands[0].argv[0], "jobs")== 0)) {//Si es un jobs, tenemos que hacer la instrucción de otra forma
+            ind++;
+            if (line->ncommands == 1) {//Si hay más de un comando el jobs no se ejecuta
+                jobs(l);
             }
         }
         for (i = ind; i < line->ncommands; i++) {
@@ -177,14 +211,13 @@ int main(void) {
                     signal(SIGINT,SIG_DFL);
                     signal(SIGQUIT,SIG_DFL);
                 }
-                if (strcmp(line->commands[i].argv[0], "cd") ==
-                    0) {//Si es un cd en medio de muchas instrucciones no tiene que hacer nada
+                if (strcmp(line->commands[i].argv[0], "cd") == 0||strcmp(line->commands[i].argv[0], "jobs") == 0) {//Si es un cd en medio de muchas instrucciones no tiene que hacer nada
                     exit(0);
                 }
                 //Redirecciones de la entrada:
                 //Si es el primer proceso redirigimos la entrada standar si es necesario
                 if (i == 0) {
-                    close(p2[0]);//Si es el primer proceso cerramos el extremo de lectura del pipe
+                    close(p2[0]);//Si es el primer prostrcmp(line->commands[i].argv[0], "cd") == 0ceso cerramos el extremo de lectura del pipe
                     close(p1[1]);
                     close(p1[0]);//Si es el primer proceso cerramos todo el pipe
                     //Comprobacion de la redireccion de la entrada standard
@@ -198,8 +231,7 @@ int main(void) {
                         }
                     }
                 } else {
-                    if (i % 2 ==
-                        0) { //Si el proceso es par, cerramos el extremo de escritura de p1, el de lectura de p2 y redireccionamos el extremo de lectura de p1 a stdin
+                    if (i % 2 == 0) { //Si el proceso es par, cerramos el extremo de escritura de p1, el de lectura de p2 y redireccionamos el extremo de lectura de p1 a stdin
                         close(p1[1]);
                         close(p2[0]);
                         dup2(p1[0], 0);
@@ -253,8 +285,7 @@ int main(void) {
                 //Ejecutamos el comando
                 execvp(line->commands[i].argv[0], line->commands[i].argv);
                 //Si llega es que se ha producido un error.
-                fprintf(stderr, "Error al ejecutar el comando %s: %s\n", line->commands[i].argv[0],
-                        strerror(errno));
+                fprintf(stderr, "Error al ejecutar el comando %s: %s\n", line->commands[i].argv[0],strerror(errno));
                 exit(1);
             } else {
                 if (i % 2 ==
@@ -280,9 +311,9 @@ int main(void) {
             waitpid(pid,&status,0);
         }
         if(backg==1) {
-            printf("bg finalizado \n");
-            exit(0);
+            exit (0);
         }
+        l=hecho(l);
         printf("==> ");
     }
     printf("\n");
@@ -313,5 +344,15 @@ int cd(int argc, char *argv[]){
     }
     printf("El directorio actual es: %s\n", getcwd(buffer, -1));
     return (0);
+}
+
+void jobs(struct lista *l){
+    struct lista *p;
+
+    p=l;
+    while(p!=NULL){
+            printf("[%d] EJECUTANDO  %s", p->datos->ind, p->datos->inst);
+            p=p->sig;
+        }
 }
 
