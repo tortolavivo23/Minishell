@@ -56,20 +56,22 @@ struct lista *insertafinal(struct lista *l, struct dato *x) {
     return l;
 }
 
-struct lista *elimina(struct lista *p, struct dato *x, int (*f)(struct dato *a, struct dato *b)) {
+struct lista *elimina(struct lista *p, struct dato *x, int (*f)(struct dato *a, struct dato *b), int escr) {
     int cond;
     if (p == NULL) /* no hay nada que borrar */
         return p;
     /* compara el dato */
     cond = (*f)(x,p->datos);
     if (cond == 0) {/* encontrado! */
-        printf("[%d] HECHO  %s", p->datos->ind, p->datos->inst);
+        if(escr==1) {
+            printf("[%d] HECHO  %s", p->datos->ind, p->datos->inst);
+        }
         struct lista *q;
         q = p->sig;
         free(p); /* libera la memoria y hemos perdido el enlace, por eso se guarda en q */
         p = q; /* restaurar p al nuevo valor */
     } else /* no encontrado */
-        p->sig = elimina(p->sig,x,f); /* recurre */
+        p->sig = elimina(p->sig,x,f, escr); /* recurre */
     return p;
 }
 
@@ -109,7 +111,7 @@ struct lista *hecho(struct lista *l){
     struct dato *d=(struct dato *) malloc(sizeof(struct dato));
     int status;
     while ((d->pid = waitpid(-1, &status, WNOHANG)) > 0) {
-        l = elimina(l, d, equals);
+        l = elimina(l, d, equals, 1);
     }
     return l;
 }
@@ -117,6 +119,7 @@ struct lista *hecho(struct lista *l){
 
 int cd (int argc, char *argv[]);
 struct lista *jobs(struct lista *l);
+struct lista *fg(struct lista *l, int argc, char *argv[]);
 
 int main(void) {
     pid_t pid;
@@ -200,6 +203,12 @@ int main(void) {
                 l=jobs(l);
             }
         }
+        if ((line->ncommands>=1)&&(strcmp(line->commands[0].argv[0], "fg")== 0)) {//Si es un fg, tenemos que hacer la instrucción de otra forma
+            ind++;
+            if (line->ncommands == 1) {//Si hay más de un comando el jobs no se ejecuta
+                l=fg(l,line->commands[0].argc, line->commands[0].argv);
+            }
+        }
         for (i = ind; i < line->ncommands; i++) {
             //Ejecucion de los procesos
             pid = fork();
@@ -211,7 +220,7 @@ int main(void) {
                     signal(SIGINT,SIG_DFL);
                     signal(SIGQUIT,SIG_DFL);
                 }
-                if (strcmp(line->commands[i].argv[0], "cd") == 0||strcmp(line->commands[i].argv[0], "jobs") == 0) {//Si es un cd en medio de muchas instrucciones no tiene que hacer nada
+                if (strcmp(line->commands[i].argv[0], "cd") == 0||strcmp(line->commands[i].argv[0], "jobs") == 0||strcmp(line->commands[i].argv[0], "fg") == 0) {//Si están en medio de muchas instrucciones no tiene que hacer nada
                     exit(0);
                 }
                 //Redirecciones de la entrada:
@@ -335,7 +344,7 @@ int cd(int argc, char *argv[]){
         ruta = argv[1];
     }
     else{
-        printf("Uso: \ncd RUTA\n");
+        printf("Uso: \ncd RUTA\ncd (para cambiar a $HOME)");
         return (2);
     }
     if (chdir(ruta)!=0) {//Se intenta el cambio de directorio
@@ -353,7 +362,7 @@ struct lista *jobs(struct lista *l){
     while(p!=NULL){
         g=p->sig;
         if(waitpid(p->datos->pid, &status, WNOHANG) > 0){
-            l=elimina(l,p->datos,equals);
+            l=elimina(l,p->datos,equals, 1);
         }
         else {
             printf("[%d] EJECUTANDO  %s", p->datos->ind, p->datos->inst);
@@ -361,5 +370,40 @@ struct lista *jobs(struct lista *l){
         p=g;
     }
     return l;
+}
+
+struct lista *fg(struct lista *l, int argc, char *argv[]){
+    int ind,status;
+    int encontrado=0;
+    struct lista *p, *g;
+    if(longitudl(l)==0){
+        fprintf(stderr, "Lista vacía, no se puede ejecutar");
+        exit (1);
+    }
+    if(argc==1){//Si no se especifica la instrucción vamos al último elemento
+        ind = datoFinal(l)->ind;
+    }
+    else{
+        ind = atoi(argv[1]);
+    }
+    p=l;
+    while(p!=NULL&&encontrado==0){ //Recorremos la lista buscando el índice introducido
+        g=p->sig;
+        if(p->datos->ind==ind){
+            signal(SIGINT,SIG_DFL);
+            signal(SIGQUIT,SIG_DFL); //Esto tenemos el problema de que paramos también el programa principal
+            printf("%s",p->datos->inst);
+            waitpid(p->datos->pid,&status,0);
+            elimina(l,p->datos,equals,0);
+            encontrado = 1;
+        }
+        p=g;
+    }
+    if(encontrado==0){
+        fprintf(stderr, "No existe ese trabajo");
+        exit(2);
+    }
+    return l;
+
 }
 
