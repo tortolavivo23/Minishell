@@ -187,6 +187,7 @@ int main(void) {
                 strcpy(d1->inst, buf);
                 l=insertafinal(l, d1);
                 l=hecho(l);
+                printf("[%d] %d\n", d1->ind, d1->pid);
                 printf("==> ");
                 continue;
             }
@@ -195,12 +196,6 @@ int main(void) {
             ind++;
             if (line->ncommands == 1) {//Si hay más de un comando el cd no se ejecuta
                 cd(line->commands[0].argc, line->commands[0].argv);
-            }
-        }
-        if ((line->ncommands>=1)&&(strcmp(line->commands[0].argv[0], "jobs")== 0)) {//Si es un jobs, tenemos que hacer la instrucción de otra forma
-            ind++;
-            if (line->ncommands == 1) {//Si hay más de un comando el jobs no se ejecuta
-                l=jobs(l);
             }
         }
         if ((line->ncommands>=1)&&(strcmp(line->commands[0].argv[0], "fg")== 0)) {//Si es un fg, tenemos que hacer la instrucción de otra forma
@@ -255,8 +250,7 @@ int main(void) {
                 //Redirecciones de la salida:
                 //Si es el último proceso redirigimos la salida standar si es necesario:
                 if (i == line->ncommands - 1) {
-                    if (i % 2 ==
-                        0) { //Si es el último proceso, cerramos el único extremo de escritura que queda abierto.
+                    if (i % 2 == 0) { //Si es el último proceso, cerramos el único extremo de escritura que queda abierto.
                         close(p2[1]);
                     } else {
                         close(p1[1]);
@@ -297,8 +291,10 @@ int main(void) {
                 fprintf(stderr, "Error al ejecutar el comando %s: %s\n", line->commands[i].argv[0],strerror(errno));
                 exit(1);
             } else {
-                if (i % 2 ==
-                    0) { //Cerramos p1 y lo volvemos a abrir sin ningún valor si estamos en una iteración par
+                if (strcmp(line->commands[i].argv[0], "jobs") == 0 && i == line->ncommands - 1){
+                    l=jobs(l);
+                }
+                if (i % 2 == 0) { //Cerramos p1 y lo volvemos a abrir sin ningún valor si estamos en una iteración par
                     close(p1[0]);
                     close(p1[1]);
                     pipe(p1);
@@ -359,6 +355,7 @@ struct lista *jobs(struct lista *l){
     struct lista *p, *g;
     int status;
     p=l;
+    //Recorremos la lista completa
     while(p!=NULL){
         g=p->sig;
         if(waitpid(p->datos->pid, &status, WNOHANG) > 0){
