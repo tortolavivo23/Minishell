@@ -107,19 +107,18 @@ struct dato *datoFinal(struct lista *l) {
     return p->datos;
 }
 
-struct lista *hecho(struct lista *l){
+void hecho(struct lista *l){
     struct dato *d=(struct dato *) malloc(sizeof(struct dato));
     int status;
     while ((d->pid = waitpid(-1, &status, WNOHANG)) > 0) {
         l = elimina(l, d, equals, 1);
     }
-    return l;
 }
 
 
 int cd (int argc, char *argv[]);
-struct lista *jobs(struct lista *l);
-struct lista *fg(struct lista *l, int argc, char *argv[]);
+void jobs(struct lista *l);
+void fg (struct lista *l, int argc, char *argv[]);
 
 int main(void) {
     pid_t pid;
@@ -186,7 +185,7 @@ int main(void) {
                 d1->pid = pid1;
                 strcpy(d1->inst, buf);
                 l=insertafinal(l, d1);
-                l=hecho(l);
+                hecho(l);
                 printf("[%d] %d\n", d1->ind, d1->pid);
                 printf("==> ");
                 continue;
@@ -201,7 +200,7 @@ int main(void) {
         if ((line->ncommands>=1)&&(strcmp(line->commands[0].argv[0], "fg")== 0)) {//Si es un fg, tenemos que hacer la instrucción de otra forma
             ind++;
             if (line->ncommands == 1) {//Si hay más de un comando el jobs no se ejecuta
-                l=fg(l,line->commands[0].argc, line->commands[0].argv);
+                fg(l,line->commands[0].argc, line->commands[0].argv);
             }
         }
         for (i = ind; i < line->ncommands; i++) {
@@ -292,7 +291,7 @@ int main(void) {
                 exit(1);
             } else {
                 if (strcmp(line->commands[i].argv[0], "jobs") == 0 && i == line->ncommands - 1){
-                    l=jobs(l);
+                    jobs(l);
                 }
                 if (i % 2 == 0) { //Cerramos p1 y lo volvemos a abrir sin ningún valor si estamos en una iteración par
                     close(p1[0]);
@@ -318,7 +317,7 @@ int main(void) {
         if(backg==1) {
             exit (0);
         }
-        l=hecho(l);
+        hecho(l);
         printf("==> ");
     }
     printf("\n");
@@ -351,7 +350,7 @@ int cd(int argc, char *argv[]){
     return (0);
 }
 
-struct lista *jobs(struct lista *l){
+void jobs(struct lista *l){
     struct lista *p, *g;
     int status;
     p=l;
@@ -366,10 +365,9 @@ struct lista *jobs(struct lista *l){
         }
         p=g;
     }
-    return l;
 }
 
-struct lista *fg(struct lista *l, int argc, char *argv[]){
+void fg(struct lista *l, int argc, char *argv[]){
     int ind,status;
     int encontrado=0;
     struct lista *p, *g;
@@ -387,8 +385,6 @@ struct lista *fg(struct lista *l, int argc, char *argv[]){
     while(p!=NULL&&encontrado==0){ //Recorremos la lista buscando el índice introducido
         g=p->sig;
         if(p->datos->ind==ind){
-            signal(SIGINT,SIG_DFL);
-            signal(SIGQUIT,SIG_DFL); //Esto tenemos el problema de que paramos también el programa principal
             printf("%s",p->datos->inst);
             waitpid(p->datos->pid,&status,0);
             elimina(l,p->datos,equals,0);
@@ -400,7 +396,5 @@ struct lista *fg(struct lista *l, int argc, char *argv[]){
         fprintf(stderr, "No existe ese trabajo");
         exit(2);
     }
-    return l;
-
 }
 
